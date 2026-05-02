@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>収支管理アプリ</title>
+<link href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=MedievalSharp&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --silver:    #d4d4d4;
+  --silver2:   #b0b0b0;
+  --silver3:   #888;
+  --silver-hi: #f0f0f0;
+  --gold:      #c8a84b;
+  --black:     #0a0a0a;
+  --black2:    #111;
+  --black3:    #181818;
+  --black4:    #222;
+  --profit:    #c8c8c8;
+  --loss:      #cc3333;
+  --border:    rgba(255,255,255,0.1);
+  --border2:   rgba(255,255,255,0.2);
+}
+
+body {
+font-family: ‘UnifrakturMaguntia’, cursive;
+background: var(–black);
+min-height: 100vh;
+max-width: 480px;
+margin: 0 auto;
+position: relative;
+overflow-x: hidden;
+color: var(–silver);
+}
+
+/* ── CONCRETE TEXTURE ── */
+body::before {
+content:’’;
+position:fixed; inset:0;
+background:
+repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,0.012) 3px,rgba(255,255,255,0.012) 4px),
+repeating-linear-gradient(90deg,transparent,transparent 12px,rgba(255,255,255,0.006) 12px,rgba(255,255,255,0.006) 13px);
+pointer-events:none; z-index:0;
+}
+
+/* Silver dust particles */
+body::after {
+content:’’;
+position:fixed; inset:0;
+background: radial-gradient(ellipse at 20% 30%, rgba(200,200,200,0.04) 0%, transparent 60%),
+radial-gradient(ellipse at 80% 70%, rgba(180,180,180,0.03) 0%, transparent 50%);
+pointer-events:none; z-index:0;
+}
+
+/* ── HEADER ── */
+.header {
+position:relative; z-index:2;
+padding: 24px 16px 14px;
+text-align: center;
+background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 100%);
+border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.header-top {
+font-family: ‘UnifrakturMaguntia’, cursive;
+font-size: 11px;
+letter-spacing: 6px;
+color: var(–silver3);
+margin-bottom: 6px;
+text-transform: uppercase;
+}
+
+/* Title — LA style: thick black + silver outline */
+.title-wrap { position:relative; display:inline-block; }
+
+.title-shadow {
+font-family: ‘UnifrakturMaguntia’, cursive;
+font-size: clamp(38px,11vw,54px);
+color: #000;
+position: absolute;
+top: 6px; left: 6px;
+white-space: nowrap;
+letter-spacing: 2px;
+opacity: 0.8;
+}
+.title-outline-thick {
+font-family: ‘UnifrakturMaguntia’, cursive;
+font-size: clamp(38px,11vw,54px);
+-webkit-text-stroke: 10px #000;
+color: transparent;
+position: absolute;
+top: 0; left: 0;
+white-space: nowrap;
+letter-spacing: 2px;
+}
+.title-outline-silver {
+font-family: ‘UnifrakturMaguntia’, cursive;
+font-size: clamp(38px,11vw,54px);
+-webkit-text-stroke: 3px var(–silver2);
+color: transparent;
+position: absolute;
+top: 0; left: 0;
+white-space: nowrap;
+letter-spacing: 2px;
+}
+.title-main {
+font-family: ‘UnifrakturMaguntia’, cursive;
+font-size: clamp(38px,11vw,54px);
+/* Silver gradient like the LA image */
+background: linear-gradient(180deg, #fff 0%, #d8d8d8 30%, #888 65%, #ccc 100%);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+background-clip: text;
+position: relative;
+white-space: nowrap;
+letter-spacing: 2px;
+filter: drop-shadow(0 0 8px rgba(200,200,200,0.25));
+}
+
+.header-sub {
+font-family: ‘UnifrakturMaguntia’, cursive;
+font-size: 13px;
+color: var(–silver3);
+letter-spacing: 1px;
+margin-top: 6px;
+opacity: 0.75;
+}
+.header-tag {
+font-family: ‘UnifrakturMaguntia’, cursive;
+font-size: 11px;
+color: var(–silver3);
+letter-spacing: 5px;
+margin-top: 4px;
+opacity: 0.6;
+}
+
+/* ── TABS ── */
+.tabs {
+display:flex;
+background: var(–black2);
+border-bottom: 1px solid var(–border2);
+position:sticky; top:0; z-index:10;
+}
+.tab-btn {
+flex:1; padding:12px 0; border:none; cursor:pointer;
+font-family:‘UnifrakturMaguntia’,cursive;
+font-size:14px; letter-spacing:2px;
+background:transparent; color:var(–silver3);
+border-bottom:2px solid transparent;
+transition:all 0.15s;
+}
+.tab-btn.active {
+background:rgba(255,255,255,0.04);
+color:var(–silver-hi);
+border-bottom-color:var(–silver2);
+}
+
+/* ── MONTH NAV ── */
+.month-nav {
+padding:14px 16px 10px;
+background:rgba(0,0,0,0.6);
+position:relative; z-index:2;
+border-bottom:1px solid var(–border);
+}
+.month-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.nav-btn {
+background: rgba(255,255,255,0.06);
+border: 1px solid var(–border2);
+color: var(–silver);
+font-size:24px; cursor:pointer;
+padding:0 14px; border-radius:6px; line-height:1.5;
+font-family:‘UnifrakturMaguntia’,cursive;
+}
+.nav-btn:hover { background:rgba(255,255,255,0.1); }
+.month-title {
+font-family:‘UnifrakturMaguntia’,cursive;
+font-size:26px; color:var(–silver-hi);
+text-align:center;
+text-shadow: 0 0 20px rgba(200,200,200,0.2);
+}
+.month-stats { font-size:13px; text-align:center; margin-top:4px; font-family:‘UnifrakturMaguntia’,cursive; }
+.month-out { color:var(–silver3); margin-right:10px; }
+.month-diff { font-size:16px; }
+.week-row { display:grid; grid-template-columns:repeat(7,1fr); }
+.week-label {
+text-align:center; font-size:10px; letter-spacing:1px; padding:4px 0;
+font-family:‘UnifrakturMaguntia’,cursive; color:var(–silver3);
+}
+
+/* ── CALENDAR GRID ── */
+.cal-grid {
+display:grid; grid-template-columns:repeat(7,1fr);
+gap:1px; background:rgba(255,255,255,0.06);
+position:relative; z-index:2;
+}
+.cal-cell {
+background:var(–black2);
+min-height:76px; padding:4px 2px 3px; cursor:pointer;
+border-top:2px solid transparent; transition:background 0.1s;
+}
+.cal-cell.empty { cursor:default; }
+.cal-cell.has-profit { background:rgba(200,200,200,0.05); border-top-color:var(–silver2); }
+.cal-cell.has-loss   { background:rgba(180,30,30,0.07);   border-top-color:var(–loss); }
+
+.day-num {
+width:100%; text-align:center;
+margin:2px auto 1px;
+font-size:21px;
+font-family:‘UnifrakturMaguntia’,cursive;
+color: #d8d8d8;
+-webkit-text-stroke: 2.5px #000;
+paint-order: stroke fill;
+text-shadow: 0 0 5px rgba(200,200,200,0.15);
+line-height: 1.15;
+}
+.day-num.today {
+color: #ffffff;
+-webkit-text-stroke: 2.5px #000;
+paint-order: stroke fill;
+text-shadow:
+0 0 14px rgba(255,255,255,0.7),
+0 0 6px rgba(220,220,220,0.9);
+}
+.day-num.sun { color:#bbb; -webkit-text-stroke:2.5px #000; paint-order:stroke fill; }
+.day-num.sat { color:#bbb; -webkit-text-stroke:2.5px #000; paint-order:stroke fill; }
+
+.day-invest { font-size:9px; color:#666; text-align:center; line-height:1.3; font-family:‘UnifrakturMaguntia’,cursive; }
+.day-diff   { font-size:12px; text-align:center; line-height:1.3; font-family:‘UnifrakturMaguntia’,cursive; -webkit-text-stroke:1px #000; paint-order:stroke fill; }
+.day-plus   { text-align:center; font-size:14px; color:rgba(255,255,255,0.08); margin-top:2px; }
+
+/* ── CARDS ── */
+.card {
+background: var(–black3);
+border-radius:8px; border:1px solid var(–border);
+overflow:hidden; margin:14px 14px 0;
+box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+.card-head {
+padding:10px 16px;
+background: linear-gradient(90deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02));
+border-bottom:1px solid var(–border);
+font-size:11px; letter-spacing:4px;
+color:var(–silver2);
+font-family:‘UnifrakturMaguntia’,cursive;
+}
+.stats-grid { display:grid; grid-template-columns:repeat(3,1fr); }
+.stat-cell { padding:13px 8px; text-align:center; border-right:1px solid var(–border); }
+.stat-cell:last-child { border-right:none; }
+.stat-label { font-size:9px; color:var(–silver3); letter-spacing:2px; margin-bottom:6px; font-family:‘UnifrakturMaguntia’,cursive; }
+.stat-val   { font-size:15px; font-family:‘UnifrakturMaguntia’,cursive; }
+
+/* ── RECENT ── */
+.recent-row { display:flex; align-items:center; padding:11px 16px; border-bottom:1px solid var(–border); cursor:pointer; }
+.recent-row:hover { background:rgba(255,255,255,0.03); }
+.recent-date  { font-size:13px; color:var(–silver2); font-family:‘UnifrakturMaguntia’,cursive; }
+.recent-note  { font-size:11px; color:var(–silver3); margin-top:1px; font-family:‘UnifrakturMaguntia’,cursive; }
+.recent-right { text-align:right; margin-left:auto; }
+.recent-out   { font-size:10px; color:var(–silver3); font-family:‘UnifrakturMaguntia’,cursive; }
+.recent-diff  { font-size:15px; font-family:‘UnifrakturMaguntia’,cursive; }
+
+/* ── CHART ── */
+.chart-card {
+background:var(–black3); border-radius:8px; border:1px solid var(–border);
+margin:14px 14px 0; overflow:hidden; margin-bottom:14px;
+box-shadow:0 4px 20px rgba(0,0,0,0.5);
+}
+.chart-tabs { display:flex; gap:6px; padding:12px 14px 8px; flex-wrap:wrap; }
+.chart-tab {
+padding:5px 12px; border-radius:4px;
+border:1px solid var(–border);
+font-size:11px; cursor:pointer;
+font-family:‘UnifrakturMaguntia’,cursive;
+background:transparent; color:var(–silver3);
+transition:all 0.15s; letter-spacing:1px;
+}
+.chart-tab.active { background:rgba(255,255,255,0.08); color:var(–silver-hi); border-color:var(–silver2); }
+.chart-wrap { padding:4px 14px 12px; }
+.chart-legend { display:flex; gap:16px; padding:4px 14px 10px; }
+.leg { display:flex; align-items:center; gap:6px; font-size:11px; color:var(–silver3); font-family:‘UnifrakturMaguntia’,cursive; }
+.leg-dot { width:10px; height:6px; border-radius:1px; }
+.no-data { text-align:center; color:var(–silver3); padding:36px 0; font-size:13px; font-family:‘UnifrakturMaguntia’,cursive; }
+
+/* ── MODAL ── */
+.modal-overlay {
+position:fixed; inset:0;
+background:rgba(0,0,0,0.88);
+display:none; align-items:flex-end; z-index:200;
+backdrop-filter:blur(8px);
+}
+.modal-overlay.open { display:flex; }
+.modal-sheet {
+background: linear-gradient(180deg,var(–black3),var(–black2));
+border-radius:16px 16px 0 0; width:100%;
+padding:20px 20px 44px;
+border-top:2px solid var(–silver2);
+box-shadow:0 -8px 48px rgba(0,0,0,0.6);
+}
+.modal-handle { width:44px; height:4px; background:var(–border2); border-radius:2px; margin:0 auto 18px; }
+.modal-title-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+.modal-date { font-family:‘UnifrakturMaguntia’,cursive; font-size:22px; color:var(–silver-hi); letter-spacing:1px; }
+.modal-del {
+background:rgba(180,30,30,0.15); color:var(–loss);
+border:1px solid var(–loss); border-radius:6px;
+padding:5px 14px; font-size:13px; cursor:pointer;
+font-family:‘UnifrakturMaguntia’,cursive;
+}
+.input-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
+.input-label { font-size:11px; letter-spacing:2px; margin-bottom:6px; font-family:‘UnifrakturMaguntia’,cursive; }
+.input-field {
+width:100%; padding:14px 12px; font-size:20px;
+border-radius:8px; outline:none;
+font-family:‘UnifrakturMaguntia’,cursive;
+box-sizing:border-box;
+}
+.input-invest { border:1px solid rgba(255,255,255,0.15); color:var(–silver3); background:rgba(255,255,255,0.04); }
+.input-ret    { border:2px solid var(–silver2); color:var(–silver-hi); background:rgba(255,255,255,0.06); }
+.net-preview  { border-radius:8px; padding:12px 16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; }
+.net-label { font-size:12px; color:var(–silver3); letter-spacing:2px; font-family:‘UnifrakturMaguntia’,cursive; }
+.net-val   { font-size:24px; font-family:‘UnifrakturMaguntia’,cursive; }
+.memo-label { font-size:11px; color:var(–silver3); letter-spacing:2px; margin-bottom:6px; font-family:‘UnifrakturMaguntia’,cursive; }
+.memo-input {
+width:100%; padding:11px 12px; font-size:14px;
+border:1px solid var(–border); border-radius:8px; outline:none;
+font-family:‘UnifrakturMaguntia’,cursive;
+background:rgba(255,255,255,0.04); color:var(–silver);
+box-sizing:border-box; margin-bottom:16px;
+}
+.btn-row { display:grid; grid-template-columns:1fr 2fr; gap:10px; }
+.btn-cancel {
+padding:13px; background:rgba(255,255,255,0.05);
+border:1px solid var(–border); border-radius:8px;
+font-family:‘UnifrakturMaguntia’,cursive; font-size:14px;
+cursor:pointer; color:var(–silver3);
+}
+.btn-save {
+padding:13px; border:1px solid var(–silver2); border-radius:8px;
+font-family:‘UnifrakturMaguntia’,cursive; font-size:17px;
+cursor:pointer; letter-spacing:2px;
+background: linear-gradient(135deg,#2a2a2a,#111);
+color: var(–silver-hi);
+box-shadow: 0 4px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.12);
+text-shadow: 0 0 10px rgba(220,220,220,0.4);
+}
+
+/* ── TOAST ── */
+.toast {
+position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(80px);
+background: linear-gradient(135deg,#2a2a2a,#111);
+color:var(–silver-hi); font-size:14px; padding:11px 24px; border-radius:6px;
+border:1px solid var(–silver2);
+box-shadow:0 4px 20px rgba(0,0,0,0.6);
+z-index:300; white-space:nowrap; letter-spacing:2px; opacity:0; transition:all 0.3s;
+font-family:‘UnifrakturMaguntia’,cursive;
+text-shadow:0 0 8px rgba(220,220,220,0.3);
+}
+.toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+</style>
+
+</head>
+<body>
+
+<!-- HEADER -->
+
+<div class="header">
+
+  <div class="title-wrap">
+    <div class="title-shadow">Profit and Loss</div>
+    <div class="title-outline-thick">Profit and Loss</div>
+    <div class="title-outline-silver">Profit and Loss</div>
+    <div class="title-main">Profit and Loss</div>
+  </div>
+  <div class="header-sub">No love, no luck — I just run it up</div>
+  <div class="header-tag">収支カレンダー &nbsp;✦&nbsp; City of Angels</div>
+</div>
+
+<!-- TABS -->
+
+<div class="tabs">
+  <button class="tab-btn active" id="tabCal" onclick="switchTab('cal')">🗓 Calendar</button>
+  <button class="tab-btn" id="tabChart" onclick="switchTab('chart')">📊 Graph</button>
+</div>
+
+<!-- CAL VIEW -->
+
+<div id="viewCal" style="position:relative;z-index:1;">
+  <div class="month-nav">
+    <div class="month-row">
+      <button class="nav-btn" onclick="prevMonth()">‹</button>
+      <div>
+        <div class="month-title" id="monthTitle"></div>
+        <div class="month-stats">
+          <span class="month-out" id="monthOut"></span>
+          <span class="month-diff" id="monthDiff"></span>
+        </div>
+      </div>
+      <button class="nav-btn" onclick="nextMonth()">›</button>
+    </div>
+    <div class="week-row" id="weekRow"></div>
+  </div>
+
+  <div class="cal-grid" id="calGrid"></div>
+
+  <div class="card">
+    <div class="card-head">▶ Total Stats</div>
+    <div style="display:flex;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border)">
+      <button onclick="exportData()" style="flex:1;padding:8px;background:rgba(255,255,255,0.06);border:1px solid var(--border2);border-radius:6px;font-family:'UnifrakturMaguntia',cursive;font-size:12px;color:var(--silver);cursor:pointer;letter-spacing:1px;">📤 Export</button>
+      <label style="flex:1;">
+        <span style="display:block;padding:8px;background:rgba(255,255,255,0.06);border:1px solid var(--border2);border-radius:6px;font-family:'UnifrakturMaguntia',cursive;font-size:12px;color:var(--silver);cursor:pointer;letter-spacing:1px;text-align:center;">📥 Import</span>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)"/>
+      </label>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-cell">
+        <div class="stat-label">Spent</div>
+        <div class="stat-val" id="totalSpent" style="color:var(--silver3)"></div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">Got</div>
+        <div class="stat-val" id="totalGot" style="color:var(--silver)"></div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">Net</div>
+        <div class="stat-val" id="totalNet"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="recentCard" style="display:none;margin-bottom:20px;">
+    <div class="card-head">▶ Recent Plays</div>
+    <div id="recentList"></div>
+  </div>
+  <div style="height:20px;"></div>
+</div>
+
+<!-- CHART VIEW -->
+
+<div id="viewChart" style="display:none;padding:14px 0 20px;position:relative;z-index:1;">
+  <div class="chart-card">
+    <div class="chart-tabs">
+      <button class="chart-tab active" onclick="setChartType('monthly')">月別収支</button>
+      <button class="chart-tab" onclick="setChartType('cumulative')">累計損益</button>
+      <button class="chart-tab" onclick="setChartType('daily')">直近14日</button>
+    </div>
+    <div class="chart-wrap">
+      <svg id="chartSvg" viewBox="0 0 320 150" style="width:100%;overflow:visible;"></svg>
+    </div>
+    <div class="chart-legend" id="chartLegend"></div>
+    <div class="no-data" id="chartNoData" style="display:none;">No Data Yet</div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px;">
+    <div class="card-head">▶ All Time</div>
+    <div id="allTimeList"></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+
+<div class="modal-overlay" id="modal" onclick="modalBgClick(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title-row">
+      <div class="modal-date" id="modalDate"></div>
+      <button class="modal-del" id="modalDel" onclick="deleteEntry()" style="display:none;">Delete</button>
+    </div>
+    <div class="input-row">
+      <div>
+        <div class="input-label" style="color:var(--silver3);">💸 Spent</div>
+        <input type="number" id="inputInvest" class="input-field input-invest" placeholder="0" min="0"
+          oninput="updatePreview()" onkeydown="if(event.key==='Enter')saveEntry()"/>
+      </div>
+      <div>
+        <div class="input-label" style="color:var(--silver-hi);">💰 Got Back</div>
+        <input type="number" id="inputRet" class="input-field input-ret" placeholder="0" min="0"
+          oninput="updatePreview()" onkeydown="if(event.key==='Enter')saveEntry()"/>
+      </div>
+    </div>
+    <div class="net-preview" id="netPreview" style="display:none;">
+      <span class="net-label">Today's Net</span>
+      <span class="net-val" id="netVal"></span>
+    </div>
+    <div class="memo-label">✏ Memo</div>
+    <input type="text" id="inputNote" class="memo-input" placeholder="店名・台番など..."/>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveEntry()">Lock It In</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+const WEEKS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+let entries = JSON.parse(localStorage.getItem("cfs_bk_v1") || "[]");
+let curYear  = new Date().getFullYear();
+let curMonth = new Date().getMonth();
+let currentModal = null;
+let chartType = "monthly";
+
+const yen = n => "¥" + Math.abs(Math.round(n)).toLocaleString("ja-JP");
+const gl  = v => {
+  if (Math.abs(v)>=10000) return (v/10000).toFixed(1)+"万";
+  if (Math.abs(v)>=1000)  return (v/1000).toFixed(0)+"k";
+  return Math.round(v)+"";
+};
+
+function save() { localStorage.setItem("cfs_bk_v1", JSON.stringify(entries)); }
+
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+const ds = (y,m,d) => `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+const today    = new Date();
+const todayStr = ds(today.getFullYear(), today.getMonth(), today.getDate());
+
+function buildWeekRow() {
+  document.getElementById("weekRow").innerHTML =
+    WEEKS.map(w => `<div class="week-label">${w}</div>`).join("");
+}
+
+function render() {
+  const firstDay    = new Date(curYear, curMonth, 1).getDay();
+  const daysInMonth = new Date(curYear, curMonth+1, 0).getDate();
+  const eMap = {};
+  entries.forEach(e => { eMap[e.date] = e; });
+
+  document.getElementById("monthTitle").textContent = `${curYear}年 ${curMonth+1}月`;
+
+  const pfx  = `${curYear}-${String(curMonth+1).padStart(2,"0")}`;
+  const mEnt = entries.filter(e => e.date.startsWith(pfx));
+  const mInv = mEnt.reduce((s,e)=>s+e.invest,0);
+  const mRet = mEnt.reduce((s,e)=>s+e.ret,0);
+  const mDiff= mRet-mInv;
+  document.getElementById("monthOut").textContent = "Out " + yen(mInv);
+  const md = document.getElementById("monthDiff");
+  md.textContent = (mDiff>=0?"+":"−")+yen(mDiff);
+  md.style.color = mDiff>=0?"var(--silver-hi)":"var(--loss)";
+  md.style.textShadow = mDiff>=0?"0 0 10px rgba(220,220,220,0.35)":"0 0 10px rgba(180,30,30,0.5)";
+
+  let html = "";
+  for(let i=0;i<firstDay;i++) html+=`<div class="cal-cell empty"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const s=ds(curYear,curMonth,d), e=eMap[s];
+    const diff = e ? e.ret-e.invest : null;
+    const isToday = s===todayStr;
+    const dow = (firstDay+d-1)%7;
+    let cls="cal-cell";
+    if(e&&diff!==null) cls += diff>=0?" has-profit":" has-loss";
+    let numCls="day-num";
+    if(isToday) numCls+=" today";
+    else if(dow===0) numCls+=" sun";
+    else if(dow===6) numCls+=" sat";
+
+    const numColor = isToday ? '#fff' : (dow===0||dow===6) ? '#bbb' : '#d8d8d8';
+    const numGlow  = isToday ? '0 0 14px rgba(255,255,255,0.7)' : 'none';
+    let inner = `<div class="${numCls}" style="color:${numColor};text-shadow:${numGlow};">${d}</div>`;
+    if(e&&diff!==null){
+      inner += `<div class="day-invest">${Math.round(e.invest/1000)}k</div>`;
+      const dc = diff>=0?"var(--silver-hi)":"var(--loss)";
+      const ds2 = diff>=0?"0 0 6px rgba(220,220,220,0.4)":"0 0 6px rgba(180,30,30,0.6)";
+      inner += `<div class="day-diff" style="color:${dc};text-shadow:${ds2}">${diff>=0?"+":"−"}${Math.abs(diff)>=1000?(Math.abs(diff)/1000).toFixed(1)+"k":Math.abs(Math.round(diff))}</div>`;
+    } else {
+      inner += `<div class="day-plus">＋</div>`;
+    }
+    html += `<div class="${cls}" onclick="openModal('${s}')">${inner}</div>`;
+  }
+  const rem=(firstDay+daysInMonth)%7;
+  if(rem>0) for(let i=0;i<7-rem;i++) html+=`<div class="cal-cell empty"></div>`;
+  document.getElementById("calGrid").innerHTML = html;
+
+  const aInv=entries.reduce((s,e)=>s+e.invest,0);
+  const aRet=entries.reduce((s,e)=>s+e.ret,0);
+  const aDiff=aRet-aInv;
+  document.getElementById("totalSpent").textContent = yen(aInv);
+  document.getElementById("totalGot").textContent   = yen(aRet);
+  const tn=document.getElementById("totalNet");
+  tn.textContent=(aDiff>=0?"+":"−")+yen(aDiff);
+  tn.style.color=aDiff>=0?"var(--silver-hi)":"var(--loss)";
+  tn.style.textShadow=aDiff>=0?"0 0 10px rgba(220,220,220,0.3)":"0 0 10px rgba(180,30,30,0.5)";
+
+  const rc=document.getElementById("recentCard");
+  const rl=document.getElementById("recentList");
+  if(entries.length>0){
+    rc.style.display="block";
+    rl.innerHTML=entries.slice(0,5).map(e=>{
+      const diff=e.ret-e.invest;
+      const dc=diff>=0?"var(--silver-hi)":"var(--loss)";
+      return `<div class="recent-row" onclick="openModal('${e.date}')">
+        <div>
+          <div class="recent-date">${e.date}</div>
+          ${e.note?`<div class="recent-note">${e.note}</div>`:""}
+        </div>
+        <div class="recent-right">
+          <div class="recent-out">out ${yen(e.invest)}</div>
+          <div class="recent-diff" style="color:${dc}">${diff>=0?"+":"−"}${yen(diff)}</div>
+        </div>
+      </div>`;
+    }).join("");
+  } else rc.style.display="none";
+}
+
+function prevMonth(){ if(curMonth===0){curYear--;curMonth=11;}else curMonth--; render(); }
+function nextMonth(){ if(curMonth===11){curYear++;curMonth=0;}else curMonth++; render(); }
+
+function openModal(dateStr){
+  currentModal=dateStr;
+  const e=entries.find(x=>x.date===dateStr)||{};
+  document.getElementById("modalDate").textContent="🌅 "+dateStr.replace(/-/g,".");
+  document.getElementById("inputInvest").value=e.invest!=null?e.invest:"";
+  document.getElementById("inputRet").value=e.ret!=null?e.ret:"";
+  document.getElementById("inputNote").value=e.note||"";
+  document.getElementById("modalDel").style.display=e.invest!=null?"inline-block":"none";
+  document.getElementById("modal").classList.add("open");
+  document.getElementById("netPreview").style.display="none";
+  updatePreview();
+}
+function closeModal(){ document.getElementById("modal").classList.remove("open"); currentModal=null; }
+function modalBgClick(e){ if(e.target===e.currentTarget)closeModal(); }
+
+function updatePreview(){
+  const inv=document.getElementById("inputInvest").value;
+  const ret=document.getElementById("inputRet").value;
+  if(inv===""&&ret===""){document.getElementById("netPreview").style.display="none";return;}
+  const i=parseFloat(inv)||0,r=parseFloat(ret)||0,d=r-i;
+  const prev=document.getElementById("netPreview");
+  prev.style.display="flex";
+  prev.style.border=`1px solid ${d>=0?"var(--silver2)":"var(--loss)"}`;
+  prev.style.background=d>=0?"rgba(255,255,255,0.05)":"rgba(180,30,30,0.07)";
+  const nv=document.getElementById("netVal");
+  nv.textContent=(d>=0?"+":"−")+yen(d);
+  nv.style.color=d>=0?"var(--silver-hi)":"var(--loss)";
+  nv.style.textShadow=d>=0?"0 0 12px rgba(220,220,220,0.4)":"0 0 12px rgba(180,30,30,0.6)";
+}
+
+function saveEntry(){
+  if(!currentModal)return;
+  const inv=document.getElementById("inputInvest").value;
+  const ret=document.getElementById("inputRet").value;
+  const i=inv===""?0:parseFloat(inv);
+  const r=ret===""?0:parseFloat(ret);
+  if(isNaN(i)||i<0){toast("正しい数値を入力してください");return;}
+  if(isNaN(r)||r<0){toast("正しい数値を入力してください");return;}
+  const note=document.getElementById("inputNote").value.trim();
+  entries=entries.filter(e=>e.date!==currentModal);
+  entries.push({date:currentModal,invest:i,ret:r,note});
+  entries.sort((a,b)=>a.date<b.date?1:-1);
+  save(); closeModal(); render(); renderChart();
+  toast("Saved");
+}
+
+function deleteEntry(){
+  if(!currentModal)return;
+  entries=entries.filter(e=>e.date!==currentModal);
+  save(); closeModal(); render(); renderChart();
+  toast("Deleted");
+}
+
+function switchTab(t){
+  document.getElementById("viewCal").style.display  =t==="cal"?"block":"none";
+  document.getElementById("viewChart").style.display=t==="chart"?"block":"none";
+  document.getElementById("tabCal").classList.toggle("active",t==="cal");
+  document.getElementById("tabChart").classList.toggle("active",t==="chart");
+  if(t==="chart") renderChart();
+}
+
+function setChartType(t){
+  chartType=t;
+  document.querySelectorAll(".chart-tab").forEach((b,i)=>{
+    b.classList.toggle("active",["monthly","cumulative","daily"][i]===t);
+  });
+  renderChart();
+}
+
+function renderChart(){
+  const svg=document.getElementById("chartSvg");
+  const leg=document.getElementById("chartLegend");
+  const nd=document.getElementById("chartNoData");
+  const W=320,H=150,PL=44,PR=12,PT=14,PB=26;
+  const IW=W-PL-PR,IH=H-PT-PB;
+
+  // All time
+  const aInv=entries.reduce((s,e)=>s+e.invest,0);
+  const aRet=entries.reduce((s,e)=>s+e.ret,0);
+  const aDiff=aRet-aInv;
+  const wins=entries.filter(e=>e.ret>=e.invest).length;
+  document.getElementById("allTimeList").innerHTML=[
+    ["Total Spent", yen(aInv), "var(--silver3)"],
+    ["Total Got",   yen(aRet), "var(--silver)"],
+    ["Net P&L",     (aDiff>=0?"+":"−")+yen(aDiff), aDiff>=0?"var(--silver-hi)":"var(--loss)"],
+    ["Win Rate",    entries.length>0?(wins/entries.length*100).toFixed(0)+"%":"—", "var(--silver2)"],
+  ].map(([l,v,c])=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border)">
+      <span style="font-size:12px;color:var(--silver3);letter-spacing:2px;font-family:'UnifrakturMaguntia',cursive">${l}</span>
+      <span style="font-size:16px;color:${c};font-family:'UnifrakturMaguntia',cursive">${v}</span>
+    </div>`).join("");
+
+  const SGRID="rgba(255,255,255,0.07)";
+  const STXT="#666";
+
+  if(chartType==="monthly"){
+    const months={};
+    entries.forEach(e=>{const m=e.date.slice(0,7);if(!months[m])months[m]={inv:0,ret:0};months[m].inv+=e.invest;months[m].ret+=e.ret;});
+    const mKeys=Object.keys(months).sort().slice(-8);
+    if(!mKeys.length){svg.innerHTML="";nd.style.display="block";leg.innerHTML="";return;}
+    nd.style.display="none";
+    const maxBar=Math.max(...mKeys.map(k=>Math.max(months[k].inv,months[k].ret)),1);
+    const barSlot=IW/mKeys.length;
+    let s=`<defs><linearGradient id="sg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#d0d0d0" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#555" stop-opacity="0.6"/>
+    </linearGradient></defs>`;
+    [0,.25,.5,.75,1].forEach(t=>{
+      const y=PT+(1-t)*IH;
+      s+=`<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="${SGRID}" stroke-width="0.7" stroke-dasharray="4,4"/>`;
+      s+=`<text x="${PL-4}" y="${y+4}" font-size="9" fill="${STXT}" text-anchor="end">${gl(maxBar*t)}</text>`;
+    });
+    mKeys.forEach((k,i)=>{
+      const invH=(months[k].inv/maxBar)*IH, retH=(months[k].ret/maxBar)*IH;
+      const bx=PL+i*barSlot, bw=Math.max(barSlot*0.3,7);
+      const diff=months[k].ret-months[k].inv;
+      s+=`<rect x="${bx+barSlot*0.08}" y="${PT+IH-invH}" width="${bw}" height="${Math.max(invH,1)}" fill="rgba(100,100,100,0.3)" stroke="#555" stroke-width="0.8" rx="2"/>`;
+      s+=`<rect x="${bx+barSlot*0.08+bw+3}" y="${PT+IH-retH}" width="${bw}" height="${Math.max(retH,1)}" fill="url(#sg)" stroke="#aaa" stroke-width="0.8" rx="2"/>`;
+      const dc=diff>=0?"#ccc":"#cc3333";
+      s+=`<text x="${bx+barSlot/2}" y="${PT+IH-Math.max(invH,retH)-5}" font-size="9" fill="${dc}" text-anchor="middle">${diff>=0?"+":"-"}${gl(diff)}</text>`;
+      s+=`<text x="${bx+barSlot/2}" y="${H-2}" font-size="9" fill="${STXT}" text-anchor="middle">${k.slice(5)}月</text>`;
+    });
+    svg.innerHTML=s;
+    leg.innerHTML=`<div class="leg"><div class="leg-dot" style="background:#555;border:1px solid #888"></div>投資</div>
+      <div class="leg"><div class="leg-dot" style="background:linear-gradient(135deg,#ccc,#555)"></div>回収</div>`;
+  }
+
+  else if(chartType==="cumulative"){
+    const sorted=[...entries].sort((a,b)=>a.date>b.date?1:-1);
+    let cum=0;
+    const cumData=sorted.map(e=>{cum+=(e.ret-e.invest);return{date:e.date.slice(5),val:cum};});
+    if(!cumData.length){svg.innerHTML="";nd.style.display="block";leg.innerHTML="";return;}
+    nd.style.display="none";leg.innerHTML="";
+    const allC=cumData.map(d=>d.val);
+    const minC=Math.min(...allC,0),maxC=Math.max(...allC,1),rC=(maxC-minC)||1;
+    const cxf=i=>PL+i*(IW/Math.max(cumData.length-1,1));
+    const cyf=v=>PT+(1-(v-minC)/rC)*IH;
+    const lastVal=cumData[cumData.length-1].val;
+    const lc=lastVal>=0?"#ccc":"#cc3333";
+    let s="";
+    [0,.25,.5,.75,1].forEach(t=>{
+      const v=minC+t*rC,y=cyf(v);
+      s+=`<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="${SGRID}" stroke-width="0.6" stroke-dasharray="4,4"/>`;
+      s+=`<text x="${PL-4}" y="${y+4}" font-size="9" fill="${STXT}" text-anchor="end">${v>=0?"+":""}${gl(v)}</text>`;
+    });
+    s+=`<line x1="${PL}" y1="${cyf(0)}" x2="${W-PR}" y2="${cyf(0)}" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>`;
+    if(cumData.length>1) s+=`<polyline points="${cumData.map((d,i)=>`${cxf(i)},${cyf(d.val)}`).join(" ")}" fill="none" stroke="${lc}" stroke-width="2.5" stroke-linejoin="round"/>`;
+    cumData.forEach((d,i)=>{
+      s+=`<circle cx="${cxf(i)}" cy="${cyf(d.val)}" r="3.5" fill="${d.val>=0?"#bbb":"#cc3333"}" stroke="#111" stroke-width="1.5"/>`;
+    });
+    s+=`<text x="${cxf(cumData.length-1)}" y="${cyf(lastVal)-10}" font-size="10" fill="${lc}" text-anchor="middle">${lastVal>=0?"+":""}${gl(lastVal)}</text>`;
+    [0,Math.floor(cumData.length/2),cumData.length-1].forEach(i=>{
+      if(cumData[i]) s+=`<text x="${cxf(i)}" y="${H-2}" font-size="8" fill="${STXT}" text-anchor="middle">${cumData[i].date}</text>`;
+    });
+    svg.innerHTML=s;
+  }
+
+  else if(chartType==="daily"){
+    const sorted=[...entries].sort((a,b)=>a.date>b.date?1:-1);
+    const d14=sorted.slice(-14).map(e=>({date:e.date.slice(5),diff:e.ret-e.invest}));
+    if(!d14.length){svg.innerHTML="";nd.style.display="block";leg.innerHTML="";return;}
+    nd.style.display="none";leg.innerHTML="";
+    const midY=PT+IH/2;
+    const maxD=Math.max(...d14.map(d=>Math.abs(d.diff)),1);
+    let s=`<line x1="${PL}" y1="${midY}" x2="${W-PR}" y2="${midY}" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>`;
+    s+=`<text x="${PL-4}" y="${midY+4}" font-size="9" fill="${STXT}" text-anchor="end">±0</text>`;
+    d14.forEach((d,i)=>{
+      const tw=IW/d14.length,bx=PL+i*tw+tw*0.15,bw=tw*0.7;
+      const bh=Math.max((Math.abs(d.diff)/maxD)*(IH/2),2),isP=d.diff>=0;
+      s+=`<rect x="${bx}" y="${isP?midY-bh:midY}" width="${bw}" height="${bh}" fill="${isP?"rgba(180,180,180,0.2)":"rgba(180,30,30,0.2)"}" stroke="${isP?"#aaa":"#cc3333"}" stroke-width="0.8" rx="2"/>`;
+      if(Math.abs(d.diff)>0) s+=`<text x="${bx+bw/2}" y="${isP?midY-bh-5:midY+bh+10}" font-size="8" fill="${isP?"#ccc":"#cc3333"}" text-anchor="middle">${isP?"+":"-"}${gl(d.diff)}</text>`;
+      s+=`<text x="${bx+bw/2}" y="${H-2}" font-size="7" fill="${STXT}" text-anchor="middle">${d.date}</text>`;
+    });
+    svg.innerHTML=s;
+  }
+}
+
+function exportData(){
+  const blob = new Blob([JSON.stringify(entries, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '収支データ_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  toast('Export 完了');
+}
+
+function importData(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if(!Array.isArray(data)) throw new Error();
+      entries = data;
+      save();
+      render();
+      renderChart();
+      toast('Import 完了 ' + data.length + '件');
+    } catch {
+      toast('ファイルが正しくありません');
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+buildWeekRow();
+render();
+</script>
+
+</body>
+</html>
